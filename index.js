@@ -1,5 +1,7 @@
 //grammy lib
 const {Bot,Keyboard, session, HttpError ,InlineKeyboard, InlineQueryResultBuilder } = require('grammy');
+require('dotenv').config();
+
 const { conversations } = require('@grammyjs/conversations')
 const { hydrateReply, parseMode } = require("@grammyjs/parse-mode");
 const { processBet } = require('./betFunc');
@@ -9,9 +11,10 @@ const { CheckAndRegister , checkBalance, updateBalance , updateLastBetAmount} = 
 
 const { createConversation } = require('@grammyjs/conversations');
 
-const { createWelcomeMessage, verifyDeposit } = require('./function');
+const { createWelcomeMessage, verifyDeposit , withdrawFunds } = require('./function');
 
-const bot = new Bot('YOUR_TG_BOT_TOKEN'); 
+const bot_api = process.env.BOT_API_KEY
+const bot = new Bot(bot_api); 
 
 bot.use(hydrateReply);
 
@@ -87,15 +90,56 @@ bot.command('balance', async (ctx) => {
     }
 });
 
-bot.command('history', async (ctx) => {
-    await ctx.reply("Betting history feature coming soon!");
-});
+
 
 bot.command('withdraw', async (ctx) => {
-    await ctx.reply("Withdrawal feature coming soon!");
+    const userId = ctx.from.id;
+    const message = ctx.message.text;
+    const parts = message.split(' ');
+
+    // Check if command has both amount and address
+    if (parts.length !== 3) {
+        await ctx.reply("Please use the format: /withdraw <amount> <Bep20 USDT address>");
+        return;
+    }
+
+    // Parse amount and address from command
+    const amount = parseFloat(parts[1]);
+    const address = parts[2].trim();
+    
+    if (isNaN(amount) || amount <= 0) {
+        await ctx.reply("Please enter a valid withdrawal amount greater than 0");
+        return;
+    }
+
+    // Basic address validation
+    if (!address.startsWith('0x')) {
+        await ctx.reply("Please enter a valid BEP20 wallet address.");
+        return;
+    }
+
+    const currentBalance = await checkBalance(userId);
+
+    if (currentBalance === null) {
+        await ctx.reply("Error: Unable to retrieve your balance. Please try again later.");
+        return;
+    }
+
+    if (currentBalance < amount) {
+        await ctx.reply(`Insufficient balance. Your current balance is ${currentBalance} USDT.`);
+        return;
+    }
+
+    const success = await withdrawFunds(userId, amount, address);
+    
+    if (success.success) {
+        await updateBalance(userId, currentBalance - amount);
+        const newBalance = await checkBalance(userId);
+        await ctx.reply(`Successfully withdrew ${amount} USDT to ${address}.\nTransaction Hash: ${success.txHash}\nYour new balance is ${newBalance} USDT.\n\nPlease wait for the transaction to be processed. This may take a few minutes.`);
+    } else {
+        await ctx.reply("Error processing withdrawal. Please check your wallet address and try again later.\n\nIf the issue persists, please contact support.");
+    }
 });
-
-
 
 
 
@@ -135,72 +179,15 @@ bot.command('bet', async (ctx) => {
 
 // deposit command
 bot.command('deposit', async (ctx) => {
-    const message = ctx.message.text;
-    const parts = message.split(' ');
-    
-    if (parts.length !== 2) {
-        await ctx.reply("Please use the correct format: /deposit <amount>");
-        return;
-    }
-
-    const amount = parseFloat(parts[1]);
-    
-    if (isNaN(amount) || amount <= 0) {
-        await ctx.reply("Please enter a valid deposit amount. For example: /deposit 100");
-        return;
-    }
-
-    const userId = ctx.from.id;
-    const currentBalance = await checkBalance(userId);
-
-    if (currentBalance === null) {
-        await ctx.reply("Error: Unable to retrieve your balance. Please try again later.");
-        return;
-    }
-
-    const newBalance = (currentBalance + amount).toFixed(6);
-    const updateResult = await updateBalance(userId, parseFloat(newBalance));
-
-    if (updateResult) {
-        await ctx.reply(`Deposit successful! Your new balance is ${newBalance} coins.`);
-    } else {
-        await ctx.reply("Error: Unable to process your deposit. Please try again later.");
-    }
-});
-
-
-bot.command('balance', async (ctx) => {
-    const userId = ctx.from.id;
-    const balance = await checkBalance(userId);
-
-    if (balance !== null) {
-        await ctx.reply(`Your current balance is ${balance} coins.`);
-    } else {
-        await ctx.reply("Error: Unable to retrieve your balance. Please try again later.");
-    }
-});
-
-
-
-
-
-
-
-
-
-
-
-
-bot.command('add', async (ctx) => {
     const input = ctx.message.text.split(' ');
     if (input.length !== 2) {
-        await ctx.reply("Please use the correct format: /add <amount>");
+        await ctx.reply("Please use the correct format: /deposit <amount>");
         return;
     }
 
     const amount = parseFloat(input[1]);
     if (isNaN(amount) || amount <= 0) {
-        await ctx.reply("Please enter a valid deposit amount. For example: /add 100");
+        await ctx.reply("Please enter a valid deposit amount. For example: /deposit 100");
         return;
     }
 
@@ -208,7 +195,6 @@ bot.command('add', async (ctx) => {
     const userIdLastThreeDigits = userId.toString().slice(-3);
     const randomThreeDigits = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     const depositAmount = (amount + parseFloat(`0.${randomThreeDigits}${userIdLastThreeDigits}`)).toFixed(6); // Add 6 digits after decimal
-    // const depositAmount = 39.900000; // for testing purposes
 
     const bep20Address = "0x1234567890123456789012345678901234567890"; // Replace with your actual BEP20 USDT address
 
@@ -225,7 +211,6 @@ bot.command('add', async (ctx) => {
         .text("Verify Now", `verify_deposit:${userId}:${depositAmount}`);
 
     await ctx.reply(message, { reply_markup: inlineKeyboard });
-
 });
 
 
@@ -250,6 +235,7 @@ bot.callbackQuery(/^verify_deposit:/, async (ctx) => {
 bot.on('message', async (ctx) => {
     const message = ctx.message.text;
     if (message.toLowerCase().startsWith('bet ') || message.startsWith('Bet ')) {
+        
         const betAmount = parseFloat(message.split(' ')[1]);
         if (isNaN(betAmount) || betAmount < 0.05) {
             await ctx.reply("Please enter a valid bet amount (minimum 0.05). For example: bet 0.05");
