@@ -1,7 +1,7 @@
 const MongoClient = require('mongodb').MongoClient;
 
 
-var uri = "YOUR_MONGODB_URI"  // local MongoDB URI
+var uri = "mongodb://localhost:27017"  // local MongoDB URI
 
 var dbName = "gmbl"; //database name
 var collectionName = "users"  // collection name
@@ -58,8 +58,7 @@ async function CheckData(coll_name,data){
     }
 
     await client.close();
-    // console.log("done till here")
-    // console.log(documents[0])
+
 
     return [res , documents[0]];
 
@@ -84,7 +83,7 @@ return write.acknowledged;
 }
 
 
-
+// Update CheckAndRegister function to use isRegistered
 async function CheckAndRegister(user) {
     const registered = await isRegistered(user.id);
 
