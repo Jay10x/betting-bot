@@ -1,5 +1,5 @@
+// Import the checkBalance function from the database module
 const { checkBalance , updateBalance } = require('./database');
-
 
 
 
@@ -22,7 +22,13 @@ async function processBet(ctx, betAmount, choice) {
     }
     
     // Coin toss result and win/loss determination
-    const result = Math.random() < 0.5 ? 'heads' : 'tails';
+    let result;
+    if (Math.random() < 0.5) {
+        result = 'heads';
+    } else {
+        result = 'tails';
+    }
+    
     const won = choice === result;
     
     // Calculate winnings, commission, and update balance
