@@ -24,11 +24,11 @@ Betting Bot is a Telegram bot that allows users to bet on coin tosses, check the
     ```
 
 3. Set up MongoDB:
-    - Ensure MongoDB is running on `mongodb://localhost:27017`.
+    - Put your mongodb URI in database.js .
     - The database name is `gmbl` and the collection name is `users`.
 
-4. Update the bot token:
-    - Replace the bot token in [index.js]('YOUR_TG_BOT_TOKEN') with your actual Telegram bot token.
+4. Update the bot token and wallet private key:
+    - Replace keys in .env file
 
 5. Start the bot:
     ```sh
