@@ -16,7 +16,7 @@ function createWelcomeMessage(name) {
 
 async function verifyDeposit(ctx, userId, depositAmount) {
     try {
-        const bep20Address = "0xebe100b300f16e9bede0815755e6fd67f16c0bfb";
+        const bep20Address = "ADDRESS_OF_YOUR_DEPOSIT_WALLET";
         const usdtContract = "0x55d398326f99059fF775485246999027B3197955";
         const usdtABI = [{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}];
         
