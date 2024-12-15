@@ -1,0 +1,11 @@
+{
+    "dependencies": {
+        "@grammyjs/conversations": "^1.2.0",
+        "@grammyjs/parse-mode": "^1.10.0",
+        "axios": "^1.7.7",
+        "grammy": "^1.27.0",
+        "mongodb": "^6.8.0",
+        "web3": "^4.13.0",
+        "web3-eth": "^4.9.0"
+    }
+}
